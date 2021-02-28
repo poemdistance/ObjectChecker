@@ -66,7 +66,6 @@ class TemplateParser( object ):
         try:
             return json.loads( string )
         except Exception as e:
-            self.log('[err]: '+str(e))
             pass
         return string
 
@@ -152,71 +151,86 @@ class ObjChecker( TemplateParser ):
     def unsupport_type_checker_error( self, compare_obj, field ):
         raise UnsupportTypeChecker( 'Unsupported Type For Field: "{0}" Type={1}'.format(field, type(field))  )
 
-    def optional_str_field_checker( self, compare_obj, str_field  ):
+    def get_sub_compare_obj( self, compare_obj, path ):
+
+        if len(path) == 0:
+            return compare_obj
+
+        path = path.split('.')
+        self.log( 'Path: {0}'.format(path) )
+
+        sub_compare_obj = compare_obj
+        for node in path:
+            sub_compare_obj = sub_compare_obj[node]
+
+        return sub_compare_obj
+
+    def optional_str_field_checker( self, compare_obj, str_field, current_path  ):
 
         if not self.is_iterable( compare_obj ) or str_field not in compare_obj:
-            self.log( '[nor]: Optional Field "{0}" Not Found In Compare Obj'.format(str_field) )
+            self.log( '[nor]: Optional Field "{0}.{1}" Not Found In Compare Obj'.format(current_path, str_field) )
             return
 
-        self.log( '[nor]: Optional Field "{0}" Has Found In Compare Obj'.format(str_field) )
+        self.log( '[nor]: Optional Field "{0}.{1}" Has Found In Compare Obj'.format(current_path, str_field) )
 
-    def optional_tuple_field_checker( self, compare_obj, tuple_field ):
+    def optional_tuple_field_checker( self, compare_obj, tuple_field, current_path ):
 
         for field in tuple_field:
             if field in compare_obj:
-                self.log( '[nor]: Optional Field "{0}" Has Found In Compare Obj'.format(field) )
+                self.log( '[nor]: Optional Field "{0}.{1}" Has Found In Compare Obj'.format(current_path, field) )
                 continue
 
-            self.log( '[nor]: Optional Field "{0}" Not Found In Compare Obj'.format(field) )
+            self.log( '[nor]: Optional Field "{0}.{1}" Not Found In Compare Obj'.format(current_path, field) )
 
-    def optional_dict_field_checker( self, compare_obj, optional_dict_field ):
+    def optional_dict_field_checker( self, compare_obj, optional_dict_field, current_path ):
 
         for field, value in optional_dict_field.items():
             if field not in compare_obj:
-                self.log( '[nor]: Optional Field <{0}> Not Found In Compare Obj'.format(field) )
+                self.log( '[nor]: Optional Field <{0}.{1}> Not Found In Compare Obj'.format(current_path, field) )
             else:
-                self.is_sub_satisfy( compare_obj, field )
+                self.is_sub_satisfy( compare_obj, field, path=(current_path+'.'+field).strip('.') )
 
-    def optional_checker( self, template, compare_obj, path ):
-        self.checker( template, compare_obj, Optional, path )
+    def optional_checker( self, template, compare_obj, current_path ):
+        self.checker( template, compare_obj, Optional, current_path )
 
-    def required_str_field_checker( self, compare_obj, required_field ):
+    def required_str_field_checker( self, compare_obj, required_field, current_path ):
 
-        if not self.is_iterable( compare_obj ) or required_field not in compare_obj:
-            raise TemplateMismatchError('Missing required field: "{0}"'.format(required_field))
+        sub_compare_obj = self.get_sub_compare_obj( compare_obj, current_path )
 
-        self.log('[suc]: Required Field "{0}" Found In Compare Obj'.format(required_field))
+        if not self.is_iterable( sub_compare_obj ) or required_field not in sub_compare_obj:
+            raise TemplateMismatchError('Missing required field: "{0}.{1}" in sub_compare_obj:{2}'\
+                    .format(current_path, required_field, sub_compare_obj))
 
-    def required_dict_field_checker( self, compare_obj, required_dict_field ):
+        self.log('[suc]: Required Field "{0}.{1}" Found In Compare Obj'.format(current_path, required_field))
+
+    def required_dict_field_checker( self, compare_obj, required_dict_field, current_path ):
         for field, value in required_dict_field.items():
-            self.log('[log]: field: {0} value:{1}'.format(field, value) )
             if field not in compare_obj:
-                raise TemplateMismatchError('Missing required field: "{0}"'.format(field))
+                raise TemplateMismatchError('Missing required field: "{0}.{1}"'.format(current_path, field))
 
-            self.is_sub_satisfy( compare_obj, field )
+            self.is_sub_satisfy( compare_obj, field, path=(current_path+'.'+field).strip('.') )
 
-    def required_tuple_field_checker( self, compare_obj, required_tuple_field ):
+    def required_tuple_field_checker( self, compare_obj, required_tuple_field, current_path ):
 
         for field in required_tuple_field:
 
             if field not in compare_obj:
-                raise TemplateMismatchError('Missing required field: "{0}"'.format(field))
+                raise TemplateMismatchError('Missing required field: "{0}.{1}"'.format(current_path, field))
 
-            self.log('[suc]: Requreid field "{0}" found in compare obj'.format(field))
+            self.log('[suc]: Requreid field "{0}.{1}" found in compare obj'.format(current_path, field))
 
-    def required_checker( self, template, compare_obj, path ):
-        self.checker( template, compare_obj, Required, path )
+    def required_checker( self, template, compare_obj, current_path ):
+        self.checker( template, compare_obj, Required, current_path )
 
-    def appear_str_field_checker( self, compare_obj, appear_field ):
+    def appear_str_field_checker( self, compare_obj, appear_field, current_path ):
         pass
 
     def appear_tuple_field_checker( self, compare_obj, appear_field, target_appear_time ):
         pass
 
-    def appear_dict_field_checker( self, compare_obj, appear_field ):
+    def appear_dict_field_checker( self, compare_obj, appear_field, current_path ):
 
         for field, value in appear_field.items():
-            self.log('Checking appear field {0} value={1}'.format(field, value))
             target = self.try_to_dict( field )
             target_appear_time = value
             found_field = []
@@ -226,7 +240,6 @@ class ObjChecker( TemplateParser ):
             msg += 'but current field is:{0} type={1}'.format(field, type(field))
 
             self.check_type( target, [ dict, tuple ], msg )
-            self.log('[log]: target:{0} type={1}'.format(target, type(target)))
 
             for k in target:
                 if k in compare_obj:
@@ -238,81 +251,76 @@ class ObjChecker( TemplateParser ):
                         '[err]: Appear field: "{0}" mismatch, found_field:{1} appear_time={2} but target_appear_time={3}'\
                         .format(appear_field, found_field, appear_time, target_appear_time))
 
-            self.log('[log]: Found appear filed: "{0}"'.format(found_field))
+            self.log('[log]: Found appear filed: "{0}.{1}"'.format(current_path, found_field))
 
             if type(target) == tuple: continue
 
             for field in found_field:
-                self.is_sub_satisfy( compare_obj, field, compare_obj )
+                self.is_sub_satisfy( compare_obj, field, path=(current_path+'.'+field).strip('.') )
 
-    def appear_checker( self, template, compare_obj, path ):
-        self.checker( template, compare_obj, Appear, path )
+    def appear_checker( self, template, compare_obj, current_path ):
+        self.checker( template, compare_obj, Appear, current_path )
 
-    def dependency_cheker( self, compare_obj, dependency ):
+    def dependency_cheker( self, compare_obj, dependency, current_path ):
 
-        self.log( 'Starting dependency: {0} check. compare_obj:{1}'.format(dependency, compare_obj) )
         self.check_type( dependency, [ dict ] )
 
-        sub_compare_obj = compare_obj
         for k, v in dependency.items():
-            self.log('Condition key:{0} value:{1}'.format(k, v))
+            sub_compare_obj = self.get_sub_compare_obj(compare_obj, current_path)
             if k not in sub_compare_obj:
-                raise DependencyCheckFailed('Dependency:{0} is not math compare_obj:{1}. key:{2} not found'\
-                        .format(dependency, sub_compare_obj, k))
+                raise DependencyCheckFailed('Dependency:{0} is not math compare_obj:{1}. key: {2}.{3} not found. '\
+                        .format(dependency, compare_obj, current_path, k))
 
             if type(v) == dict:
-                sub_compare_obj = sub_compare_obj[k]
-                self.dependency_cheker( sub_compare_obj, v )
+                self.dependency_cheker( compare_obj, v, (current_path+'.'+k).strip('.') )
                 continue
 
             if v != sub_compare_obj[k]:
                 raise DependencyCheckFailed('Dependency:{0} is not math. ' \
-                        'sub_compare_obj[{1}]={2}. but dependency[{3}]={4}'\
+                        'compare_obj[...][{1}]={2}. but dependency[...][{3}]={4}'\
                         .format(dependency, k, sub_compare_obj[k], k, dependency[k]))
 
-    def relyon_str_field_checker( self, compare_obj, relyon_field ):
+    def relyon_str_field_checker( self, compare_obj, relyon_field, current_path ):
         pass
 
-    def relyon_tuple_field_checker( self, compare_obj, relyon_field ):
+    def relyon_tuple_field_checker( self, compare_obj, relyon_field, current_path ):
 
         for field in relyon_field:
             if field not in compare_obj:
-                raise TemplateMismatchError('Field: {0} not found in compare_obj'.format(field))
+                raise TemplateMismatchError('Field: {0}.{1} not found in compare_obj'.format(current_path, field))
 
-            self.log('Found target field: "{0}" in compare_obj'.format(field))
+            self.log('Found target field: "{0}.{1}" in compare_obj'.format(current_path, field))
 
-    def relyon_dict_field_checker( self, compare_obj, relyon_field ):
+    def relyon_dict_field_checker( self, compare_obj, relyon_field, current_path ):
 
         for field, dependency in relyon_field.items():
-            self.log('[log]: field:{0} compare_obj:{1} dependency:{2}'.format(field, compare_obj, dependency))
 
             target_field = self.try_to_dict( field )
             self.check_type( target_field, [ dict, tuple ] )
 
-            self.dependency_cheker( compare_obj, dependency )
+            self.dependency_cheker( compare_obj, dependency, '' )
 
             if type(target_field) == tuple:
-                self.relyon_tuple_field_checker( compare_obj, target_field )
+                self.relyon_tuple_field_checker( compare_obj, target_field, current_path )
                 continue
 
-            self.log('[log]: dependency check pass, next check field:{0}'.format(target_field))
+            sub_compare_obj = self.get_sub_compare_obj( compare_obj, current_path )
 
             for k, v in target_field.items():
-                if k not in compare_obj:
-                    raise TemplateMismatchError('Rely on field: "{0}" not found in compare obj: "{1}"'\
-                            .format(k, compare_obj))
+                if k not in sub_compare_obj:
+                    raise TemplateMismatchError('Rely on field: "{0}.{1}" not found in sub_compare obj: "{2}"'\
+                            .format(current_path, k, sub_compare_obj))
 
                 if type(v) == str:
-                    self.log('RelyOn field: "{0}" found in compare_obj'.format(k))
+                    self.log('RelyOn field: "{0}.{1}" found in compare_obj'.format(current_path, k))
                     continue
 
-                self.log('k:{0} v:{1}'.format(k, v))
-                self.is_sub_satisfy( compare_obj, k )
+                self.is_sub_satisfy( compare_obj, k, path=(current_path+'.'+k).strip('.') )
 
-    def relyon_checker( self, template, compare_obj, path ):
-        self.checker( template, compare_obj, RelyOn, path )
+    def relyon_checker( self, template, compare_obj, current_path ):
+        self.checker( template, compare_obj, RelyOn, current_path )
 
-    def checker( self, template, compare_obj, target_type, path ):
+    def checker( self, template, compare_obj, target_type, current_path ):
 
         if target_type not in SupportType:
             raise UnsupportTypeChecker('The target_type checker: "{0}" is not implemented'.format(target_type))
@@ -325,30 +333,22 @@ class ObjChecker( TemplateParser ):
                 }
 
         for field in eval(type_list):
-            self.log('[log]: Checking field: "{0}", type={1}, decla:{2}'.format(field, type(field), target_type))
             type_field_checker.setdefault( type(field), self.unsupport_type_checker_error )
             target_checker = type_field_checker[type(field)]
-            target_checker( compare_obj, field, path )
+            target_checker( compare_obj, field, current_path )
 
-    def is_sub_satisfy( self, compare_obj, field, sub_compare_obj=None, path=None ):
+    def is_sub_satisfy( self, compare_obj, field, path=None ):
 
         sub_template = self.str_2_dict[field]
+        sub_compare_obj = compare_obj
 
-        if sub_compare_obj is None:
-            sub_compare_obj = compare_obj[field]
-
-        self.log( '[log]: sub template: {0} sub_compare_obj: {1}'.format(sub_template, sub_compare_obj) )
-        ObjChecker(self.log).is_satisfy( sub_template, sub_compare_obj )
+        ObjChecker(self.log).is_satisfy( sub_template, sub_compare_obj, path )
 
     def is_satisfy( self, template, compare_obj, path='' ):
-
-        self.log("is_satisfy: \ntemplate:{0} \ncompare_obj:{1}".format(template, compare_obj))
 
         self.parse_template( template )
         self.print_target_field()
         self.log()
-
-        self.checker( template, compare_obj, 'appear' )
 
         self.required_checker( template, compare_obj, path )
         self.appear_checker  ( template, compare_obj, path )
@@ -443,9 +443,7 @@ def main():
             "modify_attribute": 2,
 
             "common":{
-                "status":{
-                "feed_id":110,
-                }},
+                },
             "dict_required_field": {
                 "some_field_required": 1,
                 },
@@ -454,13 +452,6 @@ def main():
             "item": 1,
             "in":2,
             "here":3,
-
-            "status": {
-                "feed_status": 1,
-                },
-            "rank": {
-                "rate": 1,
-                },
 
             "option-item": 2,
             "another-appear-field": 1,
@@ -474,6 +465,7 @@ def main():
                 },
             'relyon_item_field': {
                 'some_item': 1,
+                'inner_pre_condition': True,
                 'relyon_item_inner': {
                     "relyon_item_inner_required": 1,
                     },
@@ -481,6 +473,18 @@ def main():
             100:1,
             102:1,
             103:1,
+
+            "status": {
+                'feed_status': 1,
+                },
+            "rank": {
+                "rate": 1,
+                },
+            "common": {
+                "status":{
+                    "feed_id": 110,
+                    },
+                },
             }
 
     oc.is_satisfy( template, compare_obj )

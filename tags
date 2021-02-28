@@ -1,0 +1,56 @@
+!_TAG_FILE_FORMAT	2	/extended format; --format=1 will not append ;" to lines/
+!_TAG_FILE_SORTED	1	/0=unsorted, 1=sorted, 2=foldcase/
+!_TAG_OUTPUT_EXCMD	mixed	/number, pattern, mixed, or combineV2/
+!_TAG_OUTPUT_FILESEP	slash	/slash or backslash/
+!_TAG_OUTPUT_MODE	u-ctags	/u-ctags or e-ctags/
+!_TAG_PATTERN_LENGTH_LIMIT	96	/0 for no limit/
+!_TAG_PROC_CWD	/home/rease/Data/Code/python/Objchk/	//
+!_TAG_PROGRAM_AUTHOR	Universal Ctags Team	//
+!_TAG_PROGRAM_NAME	Universal Ctags	/Derived from Exuberant Ctags/
+!_TAG_PROGRAM_URL	https://ctags.io/	/official site/
+!_TAG_PROGRAM_VERSION	5.9.0	/p5.9.20210110.0/
+Appear	object_check.py	/^Appear   = "appear"$/;"	v
+CheckTypeFail	object_check.py	/^class CheckTypeFail( Exception ):$/;"	c
+ObjChecker	object_check.py	/^class ObjChecker( TemplateParser ):$/;"	c
+Optional	object_check.py	/^Optional = "optional"$/;"	v
+RelyOn	object_check.py	/^RelyOn   = "relyon"$/;"	v
+Required	object_check.py	/^Required = "required"$/;"	v
+SupportType	object_check.py	/^SupportType = [ Optional,Required, Appear, RelyOn ]$/;"	v
+TemplateErr	object_check.py	/^class TemplateErr( Exception ):$/;"	c
+TemplateMismatchError	object_check.py	/^class TemplateMismatchError( Exception ):$/;"	c
+TemplateParser	object_check.py	/^class TemplateParser( object ):$/;"	c
+UnsupportTypeChecker	object_check.py	/^class UnsupportTypeChecker( Exception ):$/;"	c
+_	object_check.py	/^_ = json.dumps$/;"	v
+__init__	object_check.py	/^    def __init__( self, log=print ):$/;"	m	class:ObjChecker
+__init__	object_check.py	/^    def __init__( self, log=print ):$/;"	m	class:TemplateParser
+__init__	object_check.py	/^    def __init__( self, logmsg ):$/;"	m	class:CheckTypeFail
+__init__	object_check.py	/^    def __init__( self, logmsg ):$/;"	m	class:TemplateErr
+__init__	object_check.py	/^    def __init__( self, logmsg ):$/;"	m	class:TemplateMismatchError
+__init__	object_check.py	/^    def __init__( self, logmsg ):$/;"	m	class:UnsupportTypeChecker
+appear_checker	object_check.py	/^    def appear_checker( self, template, compare_obj ):$/;"	m	class:ObjChecker
+appear_dict_field_checker	object_check.py	/^    def appear_dict_field_checker( self, compare_obj, appear_field ):$/;"	m	class:ObjChecker
+appear_str_field_checker	object_check.py	/^    def appear_str_field_checker( self, compare_obj, appear_field ):$/;"	m	class:ObjChecker
+appear_tuple_field_checker	object_check.py	/^    def appear_tuple_field_checker( self, compare_obj, appear_field ):$/;"	m	class:ObjChecker
+check_type	object_check.py	/^    def check_type( self, obj, target_type ):$/;"	m	class:ObjChecker
+checker	object_check.py	/^    def checker( self, template, compare_obj, target_type):$/;"	m	class:ObjChecker
+dict_parser	object_check.py	/^    def dict_parser( self, key, value ):$/;"	m	class:TemplateParser
+is_satisfy	object_check.py	/^    def is_satisfy( self, template, compare_obj ):$/;"	m	class:ObjChecker
+is_sub_satisfy	object_check.py	/^    def is_sub_satisfy( self, compare_obj, field ):$/;"	m	class:ObjChecker
+main	object_check.py	/^def main():$/;"	f
+optional_checker	object_check.py	/^    def optional_checker( self, template, compare_obj ):$/;"	m	class:ObjChecker
+optional_dict_field_checker	object_check.py	/^    def optional_dict_field_checker( self, compare_obj, optional_dict_field ):$/;"	m	class:ObjChecker
+optional_str_field_checker	object_check.py	/^    def optional_str_field_checker( self, compare_obj, str_field  ):$/;"	m	class:ObjChecker
+optional_tuple_field_checker	object_check.py	/^    def optional_tuple_field_checker( self, compare_obj, tuple_field ):$/;"	m	class:ObjChecker
+parse_template	object_check.py	/^    def parse_template( self, template ):$/;"	m	class:TemplateParser
+print_target_field	object_check.py	/^    def print_target_field( self ):$/;"	m	class:TemplateParser
+relyon_checker	object_check.py	/^    def relyon_checker( self, obj ):$/;"	m	class:ObjChecker
+required_checker	object_check.py	/^    def required_checker( self, template, compare_obj ):$/;"	m	class:ObjChecker
+required_dict_field_checker	object_check.py	/^    def required_dict_field_checker( self, compare_obj, required_dict_field ):$/;"	m	class:ObjChecker
+required_str_field_checker	object_check.py	/^    def required_str_field_checker( self, compare_obj, required_field ):$/;"	m	class:ObjChecker
+required_tuple_field_checker	object_check.py	/^    def required_tuple_field_checker( self, compare_obj, required_tuple_field ):$/;"	m	class:ObjChecker
+select_declaration_parser	object_check.py	/^    def select_declaration_parser(self, value):$/;"	m	class:TemplateParser
+select_dict_parser	object_check.py	/^    def select_dict_parser( self, key, dict_obj ):$/;"	m	class:TemplateParser
+str_parser	object_check.py	/^    def str_parser( self, key, value):$/;"	m	class:TemplateParser
+template_error	object_check.py	/^    def template_error( self, value ):$/;"	m	class:TemplateParser
+try_to_dict	object_check.py	/^    def try_to_dict( self, string ):$/;"	m	class:TemplateParser
+unsupport_type_checker_error	object_check.py	/^    def unsupport_type_checker_error( self, compare_obj, field ):$/;"	m	class:ObjChecker

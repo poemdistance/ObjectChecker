@@ -49,7 +49,6 @@ class UnsupportTypeChecker( Exception ):
 class DependencyCheckFailed( Exception ):
     def __init__(  self, compare_obj, dependency, path, field, err_type='not found' ):
 
-
         if err_type == 'not found' and len(path) > 0:
             path = '.'.join( str(i) for i in path )
             logmsg = 'Dependency mismatch, key: "{0}.{1}" not found.'.format(path, field)
@@ -76,7 +75,7 @@ class DependencyCheckFailed( Exception ):
             logmsg = 'Dependency mismatch, target is "{0}={1}" but now is "{2}"'.\
                     format(full_path, dependency[field], compare_obj[field] )
         else:
-            pass
+            raise
 
         super().__init__( logmsg )
 
@@ -173,12 +172,13 @@ class ObjChecker( TemplateParser ):
         self.log = log
         pass
 
-    def copy_list( self, list_obj ):
+    def copy_list_and_append( self, list_obj, value ):
 
         result = []
         for item in list_obj:
             result.append( item )
-
+        
+        result.append( value )
         return result
 
     def is_iterable( self, obj ):
@@ -209,6 +209,7 @@ class ObjChecker( TemplateParser ):
             self.log('{0} field "{1}" {2} in compare_obj'.format(declaration, field, result))
             return
 
+        path = 'root.' + '.'.join( str(i) for i in path )
         self.log('{0} field "{1}.{2}" {3} in compare_obj'.format(declaration, path, field, result))
 
     def get_sub_obj( self, obj, path ):
@@ -230,16 +231,20 @@ class ObjChecker( TemplateParser ):
 
     def optional_str_field_checker( self, compare_obj, str_field, current_path  ):
 
-        if not self.is_iterable( compare_obj ) or str_field not in compare_obj:
-            self.print_message(Optional, current_path, str_field)
+        sub_compare_obj = self.get_sub_compare_obj( compare_obj, current_path )
+
+        if not self.is_iterable( compare_obj ) or str_field not in sub_compare_obj:
+            self.print_message(Optional, current_path, str_field, found=False)
             return
 
-        self.print_message(Optional, current_path, str_field, found=False)
+        self.print_message(Optional, current_path, str_field, found=True)
 
     def optional_tuple_field_checker( self, compare_obj, tuple_field, current_path ):
 
+        sub_compare_obj = self.get_sub_compare_obj( compare_obj, current_path )
+
         for field in tuple_field:
-            if field in compare_obj:
+            if field in sub_compare_obj:
                 self.print_message(Optional, current_path, field)
                 continue
 
@@ -247,13 +252,15 @@ class ObjChecker( TemplateParser ):
 
     def optional_dict_field_checker( self, compare_obj, optional_dict_field, current_path ):
 
+        sub_compare_obj = self.get_sub_compare_obj( compare_obj, current_path )
+
         for field, value in optional_dict_field.items():
-            if field not in compare_obj:
+            if field not in sub_compare_obj:
                 self.print_message(Optional, current_path, field, found=False)
             else:
-                local_path = self.copy_list( current_path )
-                local_path.append( field )
+                local_path = self.copy_list_and_append( current_path, field )
                 self.is_sub_satisfy( compare_obj, field, path=local_path)
+                self.print_message( Optional, current_path, field )
 
     def optional_checker( self, template, compare_obj, current_path ):
         self.checker( template, compare_obj, Optional, current_path )
@@ -273,8 +280,7 @@ class ObjChecker( TemplateParser ):
             if field not in sub_compare_obj:
                 raise TemplateMismatchError( Required, current_path, field )
 
-            local_path = self.copy_list( current_path )
-            local_path.append( field )
+            local_path = self.copy_list_and_append( current_path, field )
             self.is_sub_satisfy( compare_obj, field, path=local_path )
 
     def required_tuple_field_checker( self, compare_obj, required_tuple_field, current_path ):
@@ -324,8 +330,7 @@ class ObjChecker( TemplateParser ):
             if type(target) == tuple: continue
 
             for field in found_field:
-                local_path = self.copy_list( current_path )
-                local_path.append( field )
+                local_path = self.copy_list_and_append( current_path, field )
                 self.is_sub_satisfy( compare_obj, field, path=local_path )
 
     def appear_checker( self, template, compare_obj, current_path ):
@@ -345,8 +350,7 @@ class ObjChecker( TemplateParser ):
                 raise DependencyCheckFailed( compare_obj, dependency, current_path, k )
 
             if type(v) == dict:
-                local_path = self.copy_list( current_path )
-                local_path.append( k )
+                local_path = self.copy_list_and_append( current_path, k )
                 self.dependency_cheker( compare_obj, dependency, local_path )
 
     def relyon_str_field_checker( self, compare_obj, relyon_field, current_path ):
@@ -383,8 +387,7 @@ class ObjChecker( TemplateParser ):
                     self.print_message( RelyOn, current_path, k )
                     continue
 
-                local_path = self.copy_list( current_path )
-                local_path.append( k )
+                local_path = self.copy_list_and_append( current_path, k )
                 self.is_sub_satisfy( compare_obj, k, path=local_path )
 
     def relyon_checker( self, template, compare_obj, current_path ):
@@ -455,7 +458,7 @@ def main():
             }): Optional,
 
         _({"relyon_item_field":{
-            "some_item": Required,
+            "some_item": Optional,
             _({
                 "relyon_item_inner":{
                     "relyon_item_inner_required": Required,
@@ -481,7 +484,7 @@ def main():
 
         ( "annother",  "required", "item", "in", "here" ): Required,
 
-        ( "1", "2", "3", "4" ): Optional,
+        ( 1, 2, 3, "4" ): Optional,
 
         _({"option-item": {},
             "option-item-2":{}
@@ -494,7 +497,7 @@ def main():
                     "test4": Optional,
                     "test5": Required,
                     }
-                }): Required,
+                }): Optional,
             }
         }):Optional,
 
@@ -528,7 +531,8 @@ def main():
             "another-appear-field": 1,
             "test2": {
                 "test3":{
-                    "test5":1,
+                    "test4":1,
+                    "test5":2,
                     },
                 },
             'rely_on_item': {
@@ -554,8 +558,12 @@ def main():
             "common": {
                 "status":{
                     "feed_id": 110,
+                    (1, 2, 3, 4): 6,
                     },
                 },
+            1:1,
+            2:2,
+            3:3,
             }
 
     oc.is_satisfy( template, compare_obj )

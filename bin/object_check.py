@@ -35,6 +35,7 @@ class TemplateMismatchError( Exception ):
     def __init__( self, declaration, path, field, logmsg=None ):
 
         if logmsg is None and len(path) > 0:
+            path = 'root.' + '.'.join( str(i) for i in path )
             logmsg = 'Missing {0} field: "{1}.{2}"'.format(declaration, path, field )
         elif logmsg is None:
             logmsg = 'Missing {0} field: "{1}"'.format(declaration, field )
@@ -267,8 +268,9 @@ class ObjChecker( TemplateParser ):
         self.print_message(Required, current_path, required_field)
 
     def required_dict_field_checker( self, compare_obj, required_dict_field, current_path ):
+        sub_compare_obj = self.get_sub_compare_obj( compare_obj, current_path )
         for field, value in required_dict_field.items():
-            if field not in compare_obj:
+            if field not in sub_compare_obj:
                 raise TemplateMismatchError( Required, current_path, field )
 
             local_path = self.copy_list( current_path )
@@ -277,9 +279,10 @@ class ObjChecker( TemplateParser ):
 
     def required_tuple_field_checker( self, compare_obj, required_tuple_field, current_path ):
 
-        for field in required_tuple_field:
+        sub_compare_obj = self.get_sub_compare_obj( compare_obj, current_path )
 
-            if field not in compare_obj:
+        for field in required_tuple_field:
+            if field not in sub_compare_obj:
                 raise TemplateMismatchError( Required, current_path, field )
 
             self.print_message(Required, current_path, field)
@@ -491,7 +494,7 @@ def main():
                     "test4": Optional,
                     "test5": Required,
                     }
-                }): Optional,
+                }): Required,
             }
         }):Optional,
 
@@ -508,7 +511,7 @@ def main():
                 "inner_required": 1,
                 },
 
-            "modify_attribute": 2,
+            "modify_attribute": 1,
 
             "common":{
                 },
@@ -525,8 +528,8 @@ def main():
             "another-appear-field": 1,
             "test2": {
                 "test3":{
-                    "test5":1
-                    }
+                    "test5":1,
+                    },
                 },
             'rely_on_item': {
                 'some_item': 1,

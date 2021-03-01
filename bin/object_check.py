@@ -3,8 +3,6 @@
 
 import json
 
-_ = json.dumps
-
 """
 1. 必需字段
 2. 可选字段
@@ -22,6 +20,8 @@ RelyOn   = "relyon"
 
 SupportType = [ Optional, Required, Appear, RelyOn ]
 
+CommonType  = [ int, float, complex, str ]
+
 class TemplateErr( Exception ):
 
     def __init__( self, logmsg ):
@@ -32,7 +32,7 @@ class CheckTypeFail( Exception ):
         super().__init__( logmsg )
 
 class TemplateMismatchError( Exception ):
-    def __init__( self, declaration, path, field, logmsg=None ):
+    def __init__( self, declaration='', path='', field='', logmsg=None ):
 
         if logmsg is None and len(path) > 0:
             path = 'root.' + '.'.join( str(i) for i in path )
@@ -177,7 +177,7 @@ class ObjChecker( TemplateParser ):
         result = []
         for item in list_obj:
             result.append( item )
-        
+
         result.append( value )
         return result
 
@@ -315,8 +315,11 @@ class ObjChecker( TemplateParser ):
 
             self.check_type( target, [ dict, tuple ], msg )
 
+            # FIXME: compare_obj 应该改用sub_compare_obj
+            sub_compare_obj = self.get_sub_compare_obj( compare_obj, current_path )
+
             for k in target:
-                if k in compare_obj:
+                if k in sub_compare_obj:
                     found_field.append( k )
                     appear_time += 1
 
@@ -338,9 +341,13 @@ class ObjChecker( TemplateParser ):
 
     def dependency_cheker( self, compare_obj, dependency, current_path ):
 
-        self.check_type( dependency, [ dict ] )
-
         sub_dependency = self.get_sub_dependency( dependency, current_path )
+
+        if type(sub_dependency) in CommonType:
+            sub_compare_obj = self.get_sub_compare_obj(compare_obj, current_path)
+            if sub_dependency not in sub_compare_obj:
+                raise DependencyCheckFailed( compare_obj, dependency, current_path, sub_dependency )
+            return
 
         self.check_type( sub_dependency, [ dict ] )
 
@@ -354,7 +361,12 @@ class ObjChecker( TemplateParser ):
                 self.dependency_cheker( compare_obj, dependency, local_path )
 
     def relyon_common_field_checker( self, compare_obj, relyon_field, current_path ):
-        pass
+
+        sub_compare_obj = self.get_sub_compare_obj( compare_obj, current_path )
+        if relyon_field not in sub_compare_obj:
+            raise TemplateMismatchError( RelyOn, current_path, relyon_field )
+
+        self.print_message( RelyOn, current_path, relyon_field )
 
     def relyon_tuple_field_checker( self, compare_obj, relyon_field, current_path ):
 
@@ -369,15 +381,21 @@ class ObjChecker( TemplateParser ):
         for field, dependency in relyon_field.items():
 
             target_field = self.try_to_dict( field )
-            self.check_type( target_field, [ dict, tuple ] )
 
             self.dependency_cheker( compare_obj, dependency, [] )
+            # self.log('Dependency:{0} check pass'.format(dependency))
+
+            if type(target_field) in CommonType:
+                self.relyon_common_field_checker( compare_obj, target_field, current_path )
+                continue
 
             if type(target_field) == tuple:
                 self.relyon_tuple_field_checker( compare_obj, target_field, current_path )
                 continue
 
             sub_compare_obj = self.get_sub_compare_obj( compare_obj, current_path )
+
+            self.check_type( target_field, [ dict, tuple ] )
 
             for k, v in target_field.items():
                 if k not in sub_compare_obj:
@@ -436,15 +454,98 @@ def main():
 
     template = {
             "first-str-required-field": Required,
-            1:   Required,
-            2.3: Required,
+            1:                          Required,
+            2.3:                        Required,
+            1+2j:                       Required,
+
+            'relyon-field':           { RelyOn : 1 },
+            3:                        { RelyOn : 2.3 } ,
+
+            json.dumps({
+
+                'more-than-one-depth': {
+                    json.dumps({
+                        'second-depth': {
+                            'third-depth': Required,
+                            },
+                        }): Required
+                    },
+
+                'more-than-one-depth2': {
+                    json.dumps({
+                        'second-depth': {
+                            'third-depth': Required,
+                            }
+                        }): Optional,
+                    }
+                }): Required,
+
+            json.dumps({
+
+                'first-appear': {
+                    'inner-appear-requied-field': Required,
+
+                    json.dumps({
+                        "required-in-appear": {
+                            'good': Required
+                            }
+                        }): Required,
+
+                    json.dumps({
+                        'appear': {
+
+                            },
+
+                        'appear2': {
+
+                            }
+
+                        }): { Appear : 1 }
+                    },
+
+                'second-appear': {
+
+                    }
+
+                }) : { Appear : 1  },
+
             }
 
-    compare_obj = { 
+    compare_obj = {
             "first-str-required-field": 1,
             1:      1,
             2.3:    1,
-            }
+            1+2j:   2,
+
+            'relyon-field':         1,
+            3:                      1,
+
+            'more-than-one-depth': {
+                'second-depth': {
+                    'third-depth': 1,
+                    }
+            },
+            
+            'more-than-one-depth2': {
+                'second-depth': {
+                    'third-depth': 1,
+                    }
+            },
+
+            'first-appear': {
+                'inner-appear-requied-field': 1,
+                'required-in-appear': {
+                    'good': 2
+                    },
+                'appear': {
+                    'test': 2
+                    },
+                },
+        }
+
+    # 定位:
+    #'field': { Relyon  : { 'other-field': value } }
+    #'field': { Relyon  : 'other-field' }
 
     oc.is_satisfy( template, compare_obj )
 

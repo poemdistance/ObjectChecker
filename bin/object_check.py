@@ -193,7 +193,7 @@ class ObjChecker( TemplateParser ):
             if msg: raise CheckTypeFail(msg)
             raise CheckTypeFail( 'Current type is {0} but target_type is: {1}'.format( type(obj), target_type ) )
 
-    def unsupport_type_checker_error( self, compare_obj, field ):
+    def unsupport_type_checker_error( self, compare_obj, field, path ):
         raise UnsupportTypeChecker( 'Unsupported Type For Field: "{0}" Type={1}'.format(field, type(field))  )
 
     def print_dependency_result( self, dependency, field, is_pass=True ):
@@ -229,7 +229,7 @@ class ObjChecker( TemplateParser ):
     def get_sub_dependency( self, dependency, path ):
         return self.get_sub_obj( dependency, path )
 
-    def optional_str_field_checker( self, compare_obj, str_field, current_path  ):
+    def optional_common_field_checker( self, compare_obj, str_field, current_path  ):
 
         sub_compare_obj = self.get_sub_compare_obj( compare_obj, current_path )
 
@@ -265,7 +265,7 @@ class ObjChecker( TemplateParser ):
     def optional_checker( self, template, compare_obj, current_path ):
         self.checker( template, compare_obj, Optional, current_path )
 
-    def required_str_field_checker( self, compare_obj, required_field, current_path ):
+    def required_common_field_checker( self, compare_obj, required_field, current_path ):
 
         sub_compare_obj = self.get_sub_compare_obj( compare_obj, current_path )
 
@@ -296,7 +296,7 @@ class ObjChecker( TemplateParser ):
     def required_checker( self, template, compare_obj, current_path ):
         self.checker( template, compare_obj, Required, current_path )
 
-    def appear_str_field_checker( self, compare_obj, appear_field, current_path ):
+    def appear_common_field_checker( self, compare_obj, appear_field, current_path ):
         pass
 
     def appear_tuple_field_checker( self, compare_obj, appear_field, target_appear_time ):
@@ -353,7 +353,7 @@ class ObjChecker( TemplateParser ):
                 local_path = self.copy_list_and_append( current_path, k )
                 self.dependency_cheker( compare_obj, dependency, local_path )
 
-    def relyon_str_field_checker( self, compare_obj, relyon_field, current_path ):
+    def relyon_common_field_checker( self, compare_obj, relyon_field, current_path ):
         pass
 
     def relyon_tuple_field_checker( self, compare_obj, relyon_field, current_path ):
@@ -400,9 +400,12 @@ class ObjChecker( TemplateParser ):
 
         type_list = "self." + target_type + '_list'
         type_field_checker = {
-                str:    eval('self.'+ target_type + '_str_field_checker'),
-                tuple:  eval('self.'+ target_type + '_tuple_field_checker'),
-                dict:   eval('self.'+ target_type + '_dict_field_checker'),
+                complex:    eval('self.'+ target_type + '_common_field_checker'),
+                float:      eval('self.'+ target_type + '_common_field_checker'),
+                int:        eval('self.'+ target_type + '_common_field_checker'),
+                str:        eval('self.'+ target_type + '_common_field_checker'),
+                tuple:      eval('self.'+ target_type + '_tuple_field_checker'),
+                dict:       eval('self.'+ target_type + '_dict_field_checker'),
                 }
 
         for field in eval(type_list):
@@ -432,138 +435,15 @@ def main():
     oc = ObjChecker()
 
     template = {
-        "modify_attribute": Required,
-        "common": Required,
-        _({
-            "status": {
-                "feed_status": Required,
-                },
-            "rank": {
-                "rate": Required,
-                },
-            "star":{
-                "dream": 1
-                },
-            }): { Appear: 2 },
-
-        _({"dict_required_field": {
-            "some_field_optional": Optional,
-            "some_field_required": Required,
-            }}): Required,
-
-        _({
-            "optional_field2": {
-                "inner_required": Required,
-                },
-            }): Optional,
-
-        _({"relyon_item_field":{
-            "some_item": Optional,
-            _({
-                "relyon_item_inner":{
-                    "relyon_item_inner_required": Required,
-                    }
-                }):{RelyOn: {
-                    "relyon_item_field": {
-                        "inner_pre_condition": 1,
-                        },
-                    }},
-            }}) : { RelyOn: {
-                "common": {
-                    "status":{
-                        "feed_id": 110,
-                        }
-                }} },
-
-            _({
-                "rely_on_item": Required,
-                }):
-            { RelyOn:{
-                "modify_attribute": 2,
-                }},
-
-        ( "annother",  "required", "item", "in", "here" ): Required,
-
-        ( 1, 2, 3, "4" ): Optional,
-
-        _({"option-item": {},
-            "option-item-2":{}
-        }): Optional,
-
-        ('another-appear-field', 'another-appear-field-2'): {Appear: 1},
-
-        _({ "test2":{
-            _({ "test3":{
-                    "test4": Optional,
-                    "test5": Required,
-                    }
-                }): Optional,
+            "first-str-required-field": Required,
+            1:   Required,
+            2.3: Required,
             }
-        }):Optional,
 
-        (100, 102, 102) : {
-                RelyOn : {
-                    "modify_attribute": 2
-                }
-            }
-    }
-
-    compare_obj = {
-
-            "optional_field2": {
-                "inner_required": 1,
-                },
-
-            "modify_attribute": 1,
-
-            "common":{
-                },
-            "dict_required_field": {
-                "some_field_required": 1,
-                },
-            "annother": 1,
-            "required": 1,
-            "item": 1,
-            "in":2,
-            "here":3,
-
-            "option-item": 2,
-            "another-appear-field": 1,
-            "test2": {
-                "test3":{
-                    "test4":1,
-                    "test5":2,
-                    },
-                },
-            'rely_on_item': {
-                'some_item': 1,
-                },
-            'relyon_item_field': {
-                'some_item': 1,
-                'inner_pre_condition': True,
-                'relyon_item_inner': {
-                    "relyon_item_inner_required": 1,
-                    },
-                },
-            100:1,
-            102:1,
-            103:1,
-
-            "status": {
-                'feed_status': 1,
-                },
-            "rank": {
-                "rate": 1,
-                },
-            "common": {
-                "status":{
-                    "feed_id": 110,
-                    (1, 2, 3, 4): 6,
-                    },
-                },
-            1:1,
-            2:2,
-            3:3,
+    compare_obj = { 
+            "first-str-required-field": 1,
+            1:      1,
+            2.3:    1,
             }
 
     oc.is_satisfy( template, compare_obj )

@@ -1,6 +1,10 @@
 #!/usr/bin/python3
 #-*-coding:utf8-*-
 
-path = [1, 2]
+class test(object):
+    def __init__(self):
+        pass
 
-print('.'.join(str(i) for i in path))
+d = {}
+
+d[test()] = 1

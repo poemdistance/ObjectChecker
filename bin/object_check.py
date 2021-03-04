@@ -393,7 +393,8 @@ class ObjChecker( TemplateParser ):
                 raise DependencyCheckFailed( compare_obj, dependency, current_path, k )
 
             if type(v) in CommonType and v != sub_compare_obj[k]:
-                raise DependencyCheckFailed( compare_obj, dependency, current_path, k, err_type='condition err' )
+                local_path = self.copy_and_add( current_path, k )
+                raise DependencyCheckFailed( compare_obj, dependency, local_path, k, err_type='condition err' )
 
             if type(v) in [ dict, set ]:
                 local_path = self.copy_and_add( current_path, k )
@@ -424,9 +425,10 @@ class ObjChecker( TemplateParser ):
             raise AppearForbiddenFieldErr( forbid_field, dependency, current_path )
 
         forbid_field = self.try_to_dict( forbid_field )
+        # FIXME string也是可迭代对象, 但是不能将其迭代判断
         if self.is_iterable( forbid_field ):
             for field in forbid_field:
-                self.log('forbid_field: {0}'.format(field))
+                self.log('forbid_field: {0} type: {1} sub_compare_obj: {2}'.format(field, type(field), sub_compare_obj))
                 if field in sub_compare_obj:
                     raise AppearForbiddenFieldErr( field, dependency, current_path )
                 return
@@ -514,115 +516,16 @@ def main():
     oc = ObjChecker()
 
     template = {
-            "first-str-required-field": Required,
-            1:                          Required,
-            2.3:                        Required,
-            1+2j:                       Required,
-
-            'relyon-field':           { RelyOn : 1 },
-            3:                        { RelyOn : 2.3 } ,
-
-            json.dumps({
-
-                'more-than-one-depth': {
-                    json.dumps({
-                        'second-depth': {
-                            'third-depth': Required,
-                            },
-                        }): Required
-                    },
-
-                'more-than-one-depth2': {
-                    json.dumps({
-                        'second-depth': {
-                            'third-depth': Required,
-                            }
-                        }): { RelyOn: { # FIXME 这里检测失败了
-                            "more-than-one-depth":{
-                                'second-depth':{
-                                    'third-depth': 1
-                                    }
-                                }
-                            } } ,
-                    },
-
-                }): Required,
-
-            json.dumps({
-
-                'first-appear': {
-                    'inner-appear-requied-field': Required,
-
-                    json.dumps({
-                        "required-in-appear": {
-                            'good': Required
-                            }
-                        }): Required,
-
-                    json.dumps({
-                        'appear': { },
-                        'appear2': { },
-
-                        }): { Appear : 1 }
-                    },
-
-                }) : { Appear : 1  },
-
-            json.dumps({
-                'appear-relyon':{
-                    'test':     Optional,
-                    }
-                }):
-                { RelyOn :
-                    {
-                        'first-appear': {
-                            'required-in-appear': {
-                                # 'good', 'study', 'day', 'up'
-                                }
-                            }
-                    }
+            'be_relyon_field': Optional,
+            'rely_on_field': {
+                RelyOn: { 'be_relyon_field': 1 }
                 }
             }
 
     compare_obj = {
-            "first-str-required-field": 1,
-            1:      1,
-            2.3:    1,
-            1+2j:   2,
-
-            'relyon-field':         1,
-            3:                      1,
-
-            'more-than-one-depth': {
-                'second-depth': {
-                    'third-depth': 1,
-                    }
-            },
-
-            'more-than-one-depth2': {
-                'second-depth': {
-                    'third-depth': 1,
-                    }
-            },
-
-            'first-appear': {
-                'inner-appear-requied-field': 1,
-                'required-in-appear': {
-                    'good': 2
-                    },
-                'appear': {
-                    'test': 2
-                    },
-                },
-
-            'appear-relyon': {
-
-                },
-        }
-
-    # 定位:
-    #'field': { Relyon  : { 'other-field': value } }
-    #'field': { Relyon  : 'other-field' }
+                'be_relyon_field': 100,
+                'rely_on_field': 2
+            }
 
     oc.is_satisfy( template, compare_obj )
 

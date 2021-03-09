@@ -165,14 +165,14 @@ class TestObjChecker(unittest.TestCase):
 
                 'rely_on_field': {
                     RelyOn: { 'be_relyon_field': {
-                        'inner': 1+2j,
+                        'inner': 1,
                         } }
                     }
                 }
 
         compare_obj = {
                     'be_relyon_field':  {
-                        'inner': 1+2j
+                        'inner': 1
                         },
                     'rely_on_field': 2
                 }
@@ -197,25 +197,6 @@ class TestObjChecker(unittest.TestCase):
 
         ObjChecker().is_satisfy( template, compare_obj )
 
-    def test_relyon_check_succ3( self ):
-
-        template = {
-
-                'be_relyon_field': Optional,
-
-                'rely_on_field': {
-                    RelyOn: { 'be_relyon_field': 1 }
-                    }
-                }
-
-        compare_obj = {
-                    'be_relyon_field': 100,
-                    'rely_on_field': 2
-                }
-
-        with self.assertRaises( TemplateMismatchError ):
-            ObjChecker().is_satisfy( template, compare_obj )
-
     def test_relyon_check_fail0( self ):
 
         template = {
@@ -227,16 +208,16 @@ class TestObjChecker(unittest.TestCase):
 
                 'rely_on_field': {
                     RelyOn: { 'be_relyon_field': {
-                        'inner': 1+2j,
+                        'inner': 1,
                         } }
                     }
                 }
 
         compare_obj = {
                     'be_relyon_field':  {
-                        'inner': 1+2j
+                        'inner': 1
                         },
-                    # 'rely_on_field': 2
+                     # 'rely_on_field': 2
                 }
 
         with self.assertRaises( TemplateMismatchError ):
@@ -303,12 +284,31 @@ class TestObjChecker(unittest.TestCase):
 
         compare_obj = {
                     'be_relyon_field':  {
+                        "inner": 1
                         },
                 }
 
         with self.assertRaises( TemplateMismatchError ):
             ObjChecker().is_satisfy( template, compare_obj )
 
+    def test_relyon_check_fail3( self ):
+
+        template = {
+
+                'be_relyon_field': Optional,
+
+                'rely_on_field': {
+                    RelyOn: { 'be_relyon_field': 1 }
+                    }
+                }
+
+        compare_obj = {
+                    'be_relyon_field': 100,
+                    'rely_on_field': 2
+                }
+
+        with self.assertRaises( AppearForbiddenFieldErr ):
+            ObjChecker().is_satisfy( template, compare_obj )
     
     def test_large_condition_succ( self ):
 
@@ -316,7 +316,6 @@ class TestObjChecker(unittest.TestCase):
                 "first-str-required-field": Required,
                 1:                          Required,
                 2.3:                        Required,
-                1+2j:                       Required,
 
                 'relyon-field':           { RelyOn : 1 },
                 3:                        { RelyOn : 2.3 } ,
@@ -411,7 +410,7 @@ class TestObjChecker(unittest.TestCase):
                 'more-than-one-depth': {
                     'second-depth': {
                         'third-depth': 1,
-                        's': 3,
+                        's': 2,
                         },
                     'second-depth2': 5
                 },

@@ -2,25 +2,7 @@
 #-*-coding:utf8-*-
 
 import json
-
-"""
-1. 必需字段
-2. 可选字段
-3. 必须出现n次字段
-4. 依赖字段
-5. 类型检测
-6. 值检测
-7. 长度检测
-"""
-
-Optional = "optional"
-Required = "required"
-Appear   = "appear"
-RelyOn   = "relyon"
-
-SupportType = [ Optional, Required, Appear, RelyOn ]
-
-CommonType  = [ int, float, complex, str ]
+from const import *
 
 class TemplateErr( Exception ):
 
@@ -85,6 +67,7 @@ class AppearForbiddenFieldErr( Exception ):
         for node in path: prefix += '.'+str(node)
         logmsg = 'Appear forbidden field: {0}.{1} when dependency:{2} is not satisfy'.format(prefix, forbid_field, dependency)
         super().__init__( logmsg )
+
 
 class TemplateParser( object ):
 
@@ -425,13 +408,17 @@ class ObjChecker( TemplateParser ):
             raise AppearForbiddenFieldErr( forbid_field, dependency, current_path )
 
         forbid_field = self.try_to_dict( forbid_field )
-        # FIXME string也是可迭代对象, 但是不能将其迭代判断
-        if self.is_iterable( forbid_field ):
+
+        # TODO 添加其他类型检测?
+        if type( forbid_field ) == dict:
             for field in forbid_field:
                 self.log('forbid_field: {0} type: {1} sub_compare_obj: {2}'.format(field, type(field), sub_compare_obj))
                 if field in sub_compare_obj:
                     raise AppearForbiddenFieldErr( field, dependency, current_path )
                 return
+        elif type( forbid_field ) in CommonType:
+            if forbid_field in sub_compare_obj:
+                raise AppearForbiddenFieldErr( forbid_field, dependency, current_path )
 
     def relyon_dict_field_checker( self, compare_obj, relyon_field, current_path ):
 
@@ -443,7 +430,6 @@ class ObjChecker( TemplateParser ):
                 self.dependency_cheker( compare_obj, dependency, [] )
                 self.log('Dependency:{0} check pass'.format(dependency))
             except DependencyCheckFailed as e:
-                # TODO 检查失败应该看下目标字段存在性,按理来说不应该存在
                 self.log('Dependency:{0} is not satisfy '.format(dependency))
                 self.forbid_appear_field( compare_obj, field, dependency, current_path )
                 continue
@@ -516,15 +502,17 @@ def main():
     oc = ObjChecker()
 
     template = {
-            'be_relyon_field': Optional,
-            'rely_on_field': {
-                RelyOn: { 'be_relyon_field': 1 }
-                }
+            json.dumps({
+                1:{
+                    2: Required
+                    }
+                }): Required
             }
 
     compare_obj = {
-                'be_relyon_field': 100,
-                'rely_on_field': 2
+            1: {
+                2: 2
+                }
             }
 
     oc.is_satisfy( template, compare_obj )
